@@ -10,6 +10,9 @@ const roleUpgrader = {
         } else if (creep.harvest(target) === ERR_NOT_IN_RANGE) {
             creep.moveTo(target, {visualizePathStyle: {stroke: '#ffaa00'}});
         }
+        if (target.energy === 0) {
+            creep.memory.target = null;
+        }
     },
 
     /** @param {Creep} creep **/
@@ -38,7 +41,19 @@ const roleUpgrader = {
         }
         else {
             if (creep.memory.target == null) {
-                creep.memory.target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE).id;
+                let target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType === STRUCTURE_CONTAINER
+                            || structure.structureType === STRUCTURE_STORAGE)
+                            && structure.store[RESOURCE_ENERGY] > 0;
+                    }
+                });
+                const source = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE, {filter: (s) => s.energy > 0}).id;
+                if (target && (creep.pos.getRangeTo(target) < creep.pos.getRangeTo(source) || !source)) {
+                    creep.memory.target = target.id;
+                } else {
+                    creep.memory.target = source;
+                }
             }
             this.moveToTarget(creep);
         }

@@ -14,11 +14,11 @@ const creepMap = {
         parts: [TOUGH,TOUGH,TOUGH,TOUGH,ATTACK,ATTACK,ATTACK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     miner: {
-        num: 2,
+        num: 1,
         parts: [WORK,WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     harvester: {
-        num: 7,
+        num: 6,
         parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     builder: {
@@ -26,7 +26,7 @@ const creepMap = {
         parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     upgrader: {
-        num: 5,
+        num: 4,
         parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     sneaker: {
@@ -102,68 +102,38 @@ module.exports.loop = function () {
         if (!Game.spawns[spawn].spawning) {
 
             for (let type of Object.keys(creepMap)) {
-                if (creepMap[type].creeps.length < creepMap[type].num && spawnEnergy >= countBodyParts(creepMap[type].parts)) {
+                let bodyParts = creepMap[type].parts;
+                if (spawnEnergy < countBodyParts(bodyParts)
+                    && (type === "harvester" || type === "builder" || type === "upgrader")
+                    && creepMap[type].creeps.length < 1) {
+                    let bodyDict = {};
+                    for (let part of bodyParts) {
+                        if (bodyDict[part]) {
+                            bodyDict[part] += 1
+                        } else {
+                            bodyDict[part] = 1
+                        }
+                    }
+                    while (spawnEnergy < countBodyParts(bodyParts)) {
+                        bodyParts = [];
+                        const min = Math.min(...Object.values(bodyDict));
+                        for (let k of Object.keys(bodyDict)) {
+                            bodyDict[k] -= bodyDict[k]/min;
+                            for (let i = 0; i < bodyDict[k]; i++) {
+                                bodyParts.push(k);
+                            }
+                        }
+                    }
+                }
+                if (creepMap[type].creeps.length < creepMap[type].num && spawnEnergy >= countBodyParts(bodyParts)) {
                     const newName = type + Game.time;
                     console.log(`Spawning new ${type}: ${newName}`);
-                    Game.spawns[spawn].spawnCreep(creepMap[type].parts, newName,
+                    Game.spawns[spawn].spawnCreep(bodyParts, newName,
                         {memory: {role: type}});
                     break;
                 }
             }
 
-            // if (harvesters.length < 1 && spawnEnergy >= countBodyParts(bodyHarvesters)) {
-            //     const newName = 'Harvester' + Game.time;
-            //     console.log('Spawning new harvester: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyHarvesters, newName,
-            //         {memory: {role: 'harvester'}});
-            // } else if (builders.length < 1 && spawnEnergy >= countBodyParts(bodyBuilders)) {
-            //     const newName = 'Builder' + Game.time;
-            //     console.log('Spawning new builder: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyBuilders, newName,
-            //         {memory: {role: 'builder'}});
-            // } else if (upgraders.length < 1 && spawnEnergy >= countBodyParts(bodyUpgraders)) {
-            //     const newName = 'Upgrader' + Game.time;
-            //     console.log('Spawning new upgrader: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyUpgraders, newName,
-            //         {memory: {role: 'upgrader'}});
-            // }
-            //
-            // else if (defenders.length < numDefenders && spawnEnergy >= countBodyParts(bodyDefenders)) {
-            //     const newName = 'Defender' + Game.time;
-            //     console.log('Spawning new defender: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyDefenders, newName,
-            //         {memory: {role: 'defender'}});
-            // } else if (miners.length < numMiners && spawnEnergy >= countBodyParts(bodyMiners)) {
-            //     const newName = 'Miner' + Game.time;
-            //     console.log('Spawning new miner: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyMiners, newName,
-            //         {memory: {role: 'miner'}});
-            // } else if (harvesters.length < numHarvesters && spawnEnergy >= countBodyParts(bodyHarvesters)) {
-            //     const newName = 'Harvester' + Game.time;
-            //     console.log('Spawning new harvester: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyHarvesters, newName,
-            //         {memory: {role: 'harvester'}});
-            // } else if (builders.length < numBuilders && spawnEnergy >= countBodyParts(bodyBuilders)) {
-            //     const newName = 'Builder' + Game.time;
-            //     console.log('Spawning new builder: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyBuilders, newName,
-            //         {memory: {role: 'builder'}});
-            // } else if (upgraders.length < numUpgraders && spawnEnergy >= countBodyParts(bodyUpgraders)) {
-            //     const newName = 'Upgrader' + Game.time;
-            //     console.log('Spawning new upgrader: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyUpgraders, newName,
-            //         {memory: {role: 'upgrader'}});
-            // } else if (sneakers.length < numSneakers && spawnEnergy >= countBodyParts(bodySneakers)) {
-            //     const newName = 'Sneaker' + Game.time;
-            //     console.log('Spawning new sneaker: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodySneakers, newName,
-            //         {memory: {role: 'sneaker'}});
-            // } else if (claimers.length < numClaimers && spawnEnergy >= countBodyParts(bodyClaimers)) {
-            //     const newName = 'Claimer' + Game.time;
-            //     console.log('Spawning new claimer: ' + newName);
-            //     Game.spawns[spawn].spawnCreep(bodyClaimers, newName,
-            //         {memory: {role: 'claimer'}});
-            // }
         }
     }
     
