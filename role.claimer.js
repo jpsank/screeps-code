@@ -1,4 +1,5 @@
 const params = require('params');
+const roleBase = require('role.base');
 
 const roleClaimer = {
 

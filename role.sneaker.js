@@ -1,4 +1,5 @@
 const params = require('params');
+const roleBase = require('role.base');
 
 const roleSneaker = {
     run: function(creep) {
@@ -64,10 +65,10 @@ const roleSneaker = {
 
                 }
             } else {
-                creep.moveTo(params.home, {visualizePathStyle: {stroke: '#ffffff'}})
+                creep.moveTo(creep.room.controller.pos, {visualizePathStyle: {stroke: '#ffffff'}})
             }
         } else {
-            if (creep.room.name === params.home.roomName) {
+            if (creep.room.name === Game.myRoomName) {
                 creep.memory.target = null;
                 let target = creep.pos.findClosestByRange(FIND_MY_STRUCTURES, {
                     filter: (structure) => {
@@ -84,10 +85,10 @@ const roleSneaker = {
                         creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
                     }
                 } else {
-                    creep.moveTo(params.home, {visualizePathStyle: {stroke: '#ffffff'}});
+                    creep.moveTo(creep.room.controller.pos, {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             } else {
-                creep.moveTo(params.home, {visualizePathStyle: {stroke: '#ffffff'}})
+                creep.moveTo(new RoomPosition(25,25,Game.myRoomName), {visualizePathStyle: {stroke: '#ffffff'}})
             }
         }
 

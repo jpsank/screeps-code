@@ -1,4 +1,5 @@
 const params = require('params');
+const roleBase = require('role.base');
 
 const roleDefender = {
     run: function(creep) {
@@ -85,7 +86,7 @@ const roleDefender = {
                 }
             });
             if (target) {
-                Game.notify("WARNING: {0} defending room \"{1}\" from hostile \"{2}\", owned by \"{3}\" (location: {4})".format(creep.name, creep.room.name, target.name, target.owner.username, target.pos));
+                Game.notify(`WARNING: ${creep.name} defending room \"${creep.room.name}\" from hostile \"${target.name}\", owned by \"${target.owner.username}\" ${target.pos}`);
                 console.log(creep.name + ": Hostile \"" + target.name + "\" found");
                 if (creep.attack(target) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, {visualizePathStyle: {stroke: '#ff0000'}});

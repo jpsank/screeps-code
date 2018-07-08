@@ -1,4 +1,5 @@
 const params = require('params');
+const roleBase = require('role.base');
 
 const roleBuilder = {
 
@@ -14,26 +15,31 @@ const roleBuilder = {
     },
 
 	repairStuff: function(creep) {
-        const targets = creep.room.find(FIND_MY_STRUCTURES);
-        if (targets.length) {
-            let target = null;
-            for (let t of targets) {
-                if (target == null || (t.hits / t.hitsMax) < (target.hits / target.hitsMax)) {
-                    target = t;
+        const targets = creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                if (structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_WALL) {
+                    return (structure.hits < 110000)
+                } else {
+                    return (structure.hits < structure.hitsMax);
                 }
             }
+        }).sort(function(a, b) {
+            return (a.hits / a.hitsMax) - (b.hits / b.hitsMax);
+        });
+        const target = targets[0];
+        if (target) {
             if (creep.repair(target) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
             }
         } else {
-            creep.moveTo(params.home, {visualizePathStyle: {stroke: '#ffffff'}});
+            creep.moveTo(creep.room.controller.pos, {visualizePathStyle: {stroke: '#ffffff'}});
         }
 	},
 
     /** @param {Creep} creep **/
     run: function(creep) {
 
-    	const buildID = "5b4171959c138c4544fb7c3f";
+    	const buildID = null;
     	const buildObject = Game.getObjectById(buildID);
         
 	    if(creep.memory.building && creep.carry.energy === 0) {
@@ -48,36 +54,36 @@ const roleBuilder = {
 	    if(creep.memory.building) {
             creep.memory.target = null;
 
-            const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    const inRange = (Math.abs(structure.x - creep.pos.x) < 4 && Math.abs(structure.y - creep.pos.y) < 4);
-                    return structure.structureType === STRUCTURE_TOWER
-                        && ((structure.energy < structure.energyCapacity-50) || (inRange && structure.energy < structure.energyCapacity));
-                }
-            });
-            if (target) {
-                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            if (buildObject) {
+                let target = buildObject;
+                if (creep.build(target) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             } else {
                 const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
                     filter: (structure) => {
-                        const inRange = (Math.abs(structure.x - creep.pos.x) < 4 && Math.abs(structure.y - creep.pos.y) < 4);
-                        if (structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_WALL) {
-                            return (structure.hits < 100000 || (structure.hits < 150000 && inRange))
-                        } else {
-                            return (structure.hits < structure.hitsMax / 2 || (structure.hits < structure.hitsMax * .75 && inRange));
-                        }
+                        const range = creep.pos.getRangeTo(structure);
+                        return structure.structureType === STRUCTURE_TOWER
+                            && (range < (1-structure.energy/structure.energyCapacity)*100);
                     }
                 });
                 if (target) {
-                    if (creep.repair(target) === ERR_NOT_IN_RANGE) {
+                    if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                         creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
                     }
                 } else {
-                    if (buildObject) {
-                        let target = buildObject;
-                        if (creep.build(target) === ERR_NOT_IN_RANGE) {
+                    const target = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                        filter: (structure) => {
+                            const inRange = (Math.abs(structure.x - creep.pos.x) < 4 && Math.abs(structure.y - creep.pos.y) < 4);
+                            if (structure.structureType === STRUCTURE_RAMPART || structure.structureType === STRUCTURE_WALL) {
+                                return (structure.hits < 100000 || (structure.hits < 150000 && inRange))
+                            } else {
+                                return (structure.hits < structure.hitsMax / 2 || (structure.hits < structure.hitsMax * .75 && inRange));
+                            }
+                        }
+                    });
+                    if (target) {
+                        if (creep.repair(target) === ERR_NOT_IN_RANGE) {
                             creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
                         }
                     } else {
@@ -115,13 +121,17 @@ const roleBuilder = {
                             }
                         }
                     }
-                    for (let sourceID of Object.keys(params.sources)) {
-                        if ((Game.getObjectById(sourceID) === null || Game.getObjectById(sourceID).energy !== 0)
-                            && (!otherGoing[sourceID] || otherGoing[sourceID] < params.sources[sourceID].capacity)) {
-                            creep.memory.target = sourceID;
-                            break;
+                    let sourcesAvailable = Object.keys(params.sources).filter(
+                        sourceID => {
+                            return ((Game.getObjectById(sourceID) === null || Game.getObjectById(sourceID).energy !== 0)
+                                && (!otherGoing[sourceID] || otherGoing[sourceID] < params.sources[sourceID].capacity));
                         }
-                    }
+                    ).sort(function(a, b) {
+                        return (creep.pos.getRangeTo(Game.getObjectById(a)) + Object.keys(params.sources).indexOf(a))
+                            - (creep.pos.getRangeTo(Game.getObjectById(b)) + Object.keys(params.sources).indexOf(b));
+                    });
+                    creep.memory.target = sourcesAvailable[0];
+
                     if (creep.memory.target == null) {
                         creep.memory.target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE, {
                             filter: source => source.energy !== 0
