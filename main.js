@@ -5,33 +5,45 @@ const roleUpgrader = require('role.upgrader');
 const roleDefender = require('role.defender');
 const roleClaimer = require('role.claimer');
 const roleSneaker = require('role.sneaker');
+const roleLabber = require('role.labber');
 const towerManager = require('towerManager');
 const params = require('params');
 
+const _ = require('lodash');
+
+RoomPosition.prototype.hasPathTo = function(target, opts){
+    return this.isNearTo(target) || this.findClosestByPath([target], opts);
+};
+
+// mapping of creep spawnage, in order of priority
 const creepMap = {
     defender: {
         num: 2,
         parts: [TOUGH,TOUGH,TOUGH,TOUGH,ATTACK,ATTACK,ATTACK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     miner: {
-        num: 1,
+        num: 4,
         parts: [WORK,WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     harvester: {
-        num: 6,
-        parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
+        num: 7,
+        parts: [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     builder: {
         num: 4,
-        parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
+        parts: [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     upgrader: {
-        num: 4,
-        parts: [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
+        num: 5,
+        parts: [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
+    },
+    labber: {
+        num: 2,
+        parts: [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     sneaker: {
         num: 0,
-        parts: [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
+        parts: [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE],
     },
     claimer: {
         num: 0,
@@ -39,21 +51,23 @@ const creepMap = {
     },
 };
 
-// const numDefenders = 3; // 2
-// const numMiners = 2; // 8
-// const numHarvesters = 7; // 8
-// const numBuilders = 4; // 5
-// const numUpgraders = 5; // 4
-// const numSneakers = 0; // 0
-// const numClaimers = 0; // 0
-//
-// const bodyDefenders =  [TOUGH,TOUGH,TOUGH,TOUGH,ATTACK,ATTACK,ATTACK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodyMiners = [WORK,WORK,WORK,WORK,WORK,WORK,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodyHarvesters = [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodyBuilders =   [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodyUpgraders =  [WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodySneakers =   [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-// const bodyClaimers =   [CLAIM,MOVE];
+const logTable = function (rows) {
+    let maxLen = 0;
+    for (const row of rows) {
+        const longest = [...row].sort((a, b) => (b.length-a.length))[0];
+        if (longest.length > maxLen) {
+            maxLen = longest.length;
+        }
+    }
+    maxLen += 2; // padding
+    for (const row of rows) {
+        let str = '';
+        for (const col of row) {
+            str += col+' '.repeat(maxLen-col.length);
+        }
+        console.log(str);
+    }
+};
 
 
 const countBodyParts = function (parts) {
@@ -84,28 +98,22 @@ module.exports.loop = function () {
         }
     }
 
-    let creepString = "";
-    for (const type of Object.keys(creepMap)) {
-        creepMap[type].creeps = _.filter(Game.creeps, (creep) => creep.memory.role === type);
-        creepString += `${type}: ${creepMap[type].creeps.length}; `;
-    }
-
-    let energyString = "";
-    for (let spawn of Object.keys(Game.spawns)) {
-        energyString += `${spawn}: ${params.getEnergy(Game.spawns[spawn].room)}/${params.getEnergyCap(Game.spawns[spawn].room)}; `;
-    }
-    console.log(energyString+creepString);
+    let statTable = [ ['spawn','energy',...Object.keys(creepMap)] ];
 
     for (let spawn of Object.keys(Game.spawns)) {
         const spawnEnergy = params.getEnergy(Game.spawns[spawn].room);
         const spawnEnergyCap = params.getEnergyCap(Game.spawns[spawn].room);
-        if (!Game.spawns[spawn].spawning) {
+        statTable.push([spawn,`${spawnEnergy}/${spawnEnergyCap}`]);
+        for (let type of Object.keys(creepMap)) {
+            creepMap[type].creeps = Game.spawns[spawn].room.find(FIND_MY_CREEPS, {filter: (creep) => creep.memory.role === type});
 
-            for (let type of Object.keys(creepMap)) {
+            if (!Game.spawns[spawn].spawning) {
                 let bodyParts = creepMap[type].parts;
-                if (spawnEnergy < countBodyParts(bodyParts)
-                    && (type === "harvester" || type === "builder" || type === "upgrader")
-                    && creepMap[type].creeps.length < 1) {
+                // handle crisis situation
+                const inRoomCount = Game.spawns[spawn].room.find(FIND_MY_CREEPS, {filter: (c) => c.memory.role === type});
+                if ((type === "harvester" || type === "builder" || type === "upgrader" || type === "miner")
+                    && ((spawnEnergy < countBodyParts(bodyParts) && inRoomCount < 1)
+                        || (spawnEnergy === spawnEnergyCap && spawnEnergyCap < countBodyParts(bodyParts)))) {
                     let bodyDict = {};
                     for (let part of bodyParts) {
                         if (bodyDict[part]) {
@@ -115,28 +123,35 @@ module.exports.loop = function () {
                         }
                     }
                     while (spawnEnergy < countBodyParts(bodyParts)) {
-                        bodyParts = [];
                         const min = Math.min(...Object.values(bodyDict));
+                        if (min < 2) {
+                            break;
+                        }
+
+                        bodyParts = [];
                         for (let k of Object.keys(bodyDict)) {
-                            bodyDict[k] -= bodyDict[k]/min;
+                            bodyDict[k] -= bodyDict[k] / min;
                             for (let i = 0; i < bodyDict[k]; i++) {
                                 bodyParts.push(k);
                             }
                         }
                     }
                 }
+
                 if (creepMap[type].creeps.length < creepMap[type].num && spawnEnergy >= countBodyParts(bodyParts)) {
                     const newName = type + Game.time;
-                    console.log(`Spawning new ${type}: ${newName}`);
+                    console.log(`${spawn} spawning new ${type}: ${newName}`);
                     Game.spawns[spawn].spawnCreep(bodyParts, newName,
                         {memory: {role: type}});
                     break;
                 }
             }
-
+            statTable[statTable.length-1].push(creepMap[type].creeps.length.toString());
         }
     }
-    
+
+    logTable(statTable);
+
     for (let s of Object.keys(Game.spawns)) {
         let spawn = Game.spawns[s];
         if (spawn.spawning) {
@@ -165,6 +180,8 @@ module.exports.loop = function () {
             roleSneaker.run(creep);
         } else if(creep.memory.role === 'claimer') {
             roleClaimer.run(creep);
+        } else if(creep.memory.role === 'labber') {
+            roleLabber.run(creep);
         }
     }
 

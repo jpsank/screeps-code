@@ -3,17 +3,18 @@ const roleBase = require('role.base');
 
 const roleDefender = {
     run: function(creep) {
-        const base = [20,23];
+        const base = [22,23];
         const baseID = "E27N51";
 
         const attack = params.ATTACK;
 
-        if (attack) {
+        if (attack && attack.attack) {
             const attackObject = Game.getObjectById(attack.attackID);
 
             if (!attackObject) {
-                if (attack.room && creep.room.name !== attack.room) {
-                    creep.moveTo(new RoomPosition(25, 25, attack.room), {visualizePathStyle: {stroke: '#ffff00'}})
+                if (attack.roomName && creep.room.name !== attack.roomName) {
+                    const exitDir = creep.room.findExitTo(attack.roomName);
+                    creep.moveTo(creep.pos.findClosestByRange(exitDir), {visualizePathStyle: {stroke: '#ffff00'}});
                 } else {
                     let target = creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS, {
                         filter: (hostile) => {
@@ -83,6 +84,9 @@ const roleDefender = {
             let target = creep.pos.findClosestByPath(FIND_HOSTILE_CREEPS, {
                 filter: (hostile) => {
                     return params.allies.indexOf(hostile.owner.username) === -1;
+                },
+                sort: (a, b) => {
+                    return a.body.filter((p) => p.type === HEAL).length - b.body.filter((p) => p.type === HEAL).length;
                 }
             });
             if (target) {

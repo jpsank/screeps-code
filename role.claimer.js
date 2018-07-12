@@ -5,13 +5,13 @@ const roleClaimer = {
 
     run: function(creep) {
         const claim = {
-            room: "E26N51",
+            roomName: "E26N51",
         };
 
         creep.memory.targetRoom = null;
 
-        if (creep.room.name !== claim.room) {
-            creep.moveTo(creep.pos.findClosestByPath(creep.room.findExitTo(claim.room)), {visualizePathStyle: {stroke: '#ff99ff'}});
+        if (creep.room.name !== claim.roomName) {
+            creep.moveTo(creep.pos.findClosestByPath(creep.room.findExitTo(claim.roomName)), {visualizePathStyle: {stroke: '#ff99ff'}});
         } else {
             const target = creep.room.controller;
             if (target) {

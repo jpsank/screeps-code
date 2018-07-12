@@ -16,10 +16,9 @@ const roleSneaker = {
 
         if (!creep.memory.dumping) {
             if (attack) {
-                if (creep.room.name !== attack.room) {
-                    creep.moveTo(new RoomPosition(25, 25, attack.room), {visualizePathStyle: {stroke: '#ffff00'}})
-                    // creep.moveTo(creep.pos.findClosestByPath(creep.room.findExitTo(steal.room)),
-                    //     {visualizePathStyle: {stroke: '#ffff00'}});
+                if (creep.room.name !== attack.roomName) {
+                    const exitDir = creep.room.findExitTo(attack.roomName);
+                    creep.moveTo(creep.pos.findClosestByRange(exitDir), {visualizePathStyle: {stroke: '#ffff00'}});
                 } else {
                     let stealObject = Game.getObjectById(attack.stealID);
 
@@ -49,9 +48,9 @@ const roleSneaker = {
                             });
                             if (target) {
                                 if (target.owner) {
-                                    console.log("{0}: Stealing energy from {1}'s {2}".format(creep.name, target.owner.username, target.structureType));
+                                    console.log(`${creep.name}: Stealing energy from ${target.owner.username}'s ${target.structureType}`);
                                 } else {
-                                    console.log("{0}: Stealing energy from {1} in room {2}".format(creep.name, target.structureType, target.room.name));
+                                    console.log(`${creep.name}: Stealing energy from ${target.structureType} in room ${target.room.name}`);
                                 }
                                 if (creep.harvest(target) === ERR_NOT_IN_RANGE
                                     || creep.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
@@ -88,7 +87,7 @@ const roleSneaker = {
                     creep.moveTo(creep.room.controller.pos, {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             } else {
-                creep.moveTo(new RoomPosition(25,25,Game.myRoomName), {visualizePathStyle: {stroke: '#ffffff'}})
+                creep.moveTo(new RoomPosition(25,25,params.homeRoom), {visualizePathStyle: {stroke: '#ffffff'}})
             }
         }
 
